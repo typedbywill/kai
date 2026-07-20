@@ -1,0 +1,27 @@
+# Build directories
+build/
+bin/
+lib/
+obj/
+
+# CMake cache and build files
+CMakeCache.txt
+CMakeFiles/
+CMakeTargetDirectories.txt
+cmake_install.cmake
+Makefile
+install_manifest.txt
+
+# Qt Creator settings
+*.user
+*.user.*
+
+# IDE directories
+.idea/
+.vscode/
+.kdev4/
+*.kdev4
+
+# System / OS files
+.DS_Store
+Thumbs.db
