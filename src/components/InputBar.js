@@ -1,4 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { isTauriEnv } from "../services/settings.js";
 
 export function createInputBar(onSend) {
   const container = document.createElement("div");
@@ -48,11 +49,13 @@ export function createInputBar(onSend) {
       submit();
     } else if (e.key === "Escape") {
       e.preventDefault();
-      try {
-        const win = getCurrentWindow();
-        await win.hide();
-      } catch (err) {
-        console.warn("Could not hide window via escape:", err);
+      if (isTauriEnv()) {
+        try {
+          const win = getCurrentWindow();
+          await win.hide();
+        } catch (err) {
+          console.warn("Could not hide window via escape:", err);
+        }
       }
     }
   });
