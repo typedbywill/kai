@@ -1,108 +1,75 @@
-# KAI: KDE AI Overlay
+# KAI: Desktop AI Helper Overlay
 
-[![Build CI](https://github.com/typedbywill/kai/actions/workflows/build.yml/badge.svg)](https://github.com/typedbywill/kai/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**KAI** (KDE AI Overlay) is an ultra-lightweight, hotkey-driven desktop AI helper overlay designed for KDE Plasma 6. Written in native C++ using Qt 6 and Kirigami, it provides a seamless, instantaneous AI assistant experience without clunky browser tabs or heavy electron wrappers.
+**KAI** is a lightning-fast, hotkey-driven desktop AI helper overlay designed for KDE Plasma and Linux desktops. Built with **Tauri v2** and modern **HTML/CSS/JS**, it delivers an instantaneous, ultra-customizable AI assistant experience with a sleek dark glassmorphism design.
 
-Toggle it instantly anywhere with **`Meta + X`**.
-
----
-
-## Key Features
-
-- **Lightning-Fast Overlay:** Launches immediately, overlays on top of your work, and hides instantly when it loses focus or when you press `Escape`.
-- **Global Toggle Shortcut (`Meta + X`):** Fully integrated via `KGlobalAccel`. Register once, toggle from anywhere.
-- **OpenAI-Compatible Streaming:** Supports real-time word-by-word streaming responses from OpenAI or any compatible backend (e.g., local models via Ollama, LM Studio, or OpenRouter).
-- **Markdown & Code Rendering:** Beautiful, native rendering of Markdown responses, including lists, links, and code blocks.
-- **Native Look & Feel:** Leverages KDE's Kirigami framework to perfectly match your system's light/dark colors, borders, and typography.
-- **Persistent Local Settings:** Safely stores your API keys and custom server configurations locally.
+Toggle it instantly from anywhere using **`Meta + X`** (or `Super + X`).
 
 ---
 
-## Quick Installation (Automated)
+## ⚡ Key Features
 
-You can install KAI and its dependencies automatically with a single copy-paste command. Run the following in your terminal:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/typedbywill/kai/main/install.sh | bash
-```
-
-> [!NOTE]
-> The script will auto-detect your distribution (Arch, Fedora, or Ubuntu 24.04+ / Debian), install the required build dependencies, compile KAI, and install it to `/usr/local/bin`. It will prompt for `sudo` privileges to install system packages and install the binary.
+- **Instant Desktop Overlay:** Press `Meta + X` to toggle showing/hiding the assistant overlay anywhere on your desktop.
+- **Glassmorphic Modern UI:** Translucent dark design system (`backdrop-filter: blur`), glowing focus states, custom scrollbars, and smooth micro-animations.
+- **HTML / CSS / JS Tech Stack:** 100% customizable frontend built with Vite, standard CSS variables, and modern web APIs.
+- **Real-Time OpenAI & Ollama Streaming:** Word-by-word streaming responses from local Ollama instances (`http://localhost:11434/v1`), OpenAI, OpenRouter, or LM Studio.
+- **Markdown & Code Highlighting:** Instant Markdown parsing via `marked` and syntax highlighting via `highlight.js` with 1-click code copy buttons.
+- **Ultra Lightweight:** Consumes only ~30-40MB RAM and launches in milliseconds.
+- **Auto-Hide on Loss of Focus:** Automatically hides when you switch to another window or press `Escape`.
 
 ---
 
-## Manual Installation
+## 🚀 Quick Start (Development)
 
-If you prefer to install dependencies and build KAI manually, follow the instructions for your distribution below.
-
-### 1. Install Build Dependencies
-
-Ensure you have a C++ compiler supporting C++20, CMake, and the appropriate Qt6/KF6 development packages:
-
-#### Arch Linux
-```bash
-sudo pacman -S --needed git cmake base-devel extra-cmake-modules qt6-base qt6-declarative kirigami kglobalaccel
-```
-
-#### Fedora
-```bash
-sudo dnf install -y git cmake gcc-c++ extra-cmake-modules qt6-qtbase-devel qt6-qtdeclarative-devel kf6-kirigami-devel kf6-kglobalaccel-devel
-```
-
-#### Ubuntu 24.04+ (Noble Numbat) / Debian (Trixie+)
-```bash
-sudo apt update
-sudo apt install -y git cmake build-essential extra-cmake-modules qt6-base-dev qt6-declarative-dev libkf6kirigami-dev libkf6globalaccel-dev
-```
-
-### 2. Build & Install
-
-Run these commands in your terminal to build and install KAI:
+Ensure you have [Node.js](https://nodejs.org/) (>= 18) and [Rust](https://www.rust-lang.org/) installed:
 
 ```bash
-# Clone the repository
-git clone https://github.com/typedbywill/kai.git
-cd kai
+# 1. Install NPM dependencies
+npm install
 
-# Configure the build directory
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-
-# Compile the application
-cmake --build build -j$(nproc)
-
-# Install the application (installs to /usr/local/bin)
-sudo cmake --install build
+# 2. Run in Development Mode
+npm run tauri dev
 ```
 
 ---
 
-## Getting Started
+## 📦 Building for Production
 
-1. **Launch KAI:**
-   Run `kai` from your runner (`KRunner`, terminal, or app launcher).
-2. **Toggle the Overlay:**
-   Press `Meta + X` on your keyboard to show/hide the window.
-3. **Configure API:**
-   - Click the **Settings** button in the overlay (or press the corresponding icon).
-   - Enter your **API Key**.
-   - (Optional) Customize the **Base URL** (e.g. `http://localhost:11434/v1` for local Ollama setup) and **Model Name** (e.g., `gpt-4o`, `llama3`).
-   - Click **Save** and start chatting!
+To create a standalone production binary:
 
----
+```bash
+npm run tauri build
+```
 
-## Development
-
-To make changes to the source code:
-
-- Core controller logic resides in [src/KAIController.cpp](file:///home/william/Documentos/projetos/pessoal/ai-helper/src/KAIController.cpp) and [src/KAIController.h](file:///home/william/Documentos/projetos/pessoal/ai-helper/src/KAIController.h).
-- The user interface is built using QML in [src/ui/Overlay.qml](file:///home/william/Documentos/projetos/pessoal/ai-helper/src/ui/Overlay.qml) and [src/ui/SettingsView.qml](file:///home/william/Documentos/projetos/pessoal/ai-helper/src/ui/SettingsView.qml).
-
-Feel free to open Pull Requests or Issues!
+The compiled binary will be placed at:
+`src-tauri/target/release/kai`
 
 ---
 
-## License
+## ⌨️ Shortcuts
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+| Shortcut | Action |
+| :--- | :--- |
+| **`Meta + X`** | Toggle Overlay Window (Global) |
+| **`Esc`** | Hide Overlay Window |
+| **`Enter`** | Send Prompt |
+| **`Shift + Enter`** | Add newline to prompt |
+| **`Ctrl + L`** | Clear Chat History |
+
+---
+
+## ⚙️ Configuration
+
+Click the **Settings** icon (gear icon in the header) to configure:
+- **Base URL:** Endpoint for your AI server (default: `http://localhost:11434/v1` for Ollama).
+- **API Key:** Optional key for OpenAI / OpenRouter.
+- **Model Name:** Model to query (e.g. `llama3.2`, `gpt-4o-mini`, `deepseek-r1`).
+- **System Prompt:** Custom instructions for KAI.
+- **Hide on Loss of Focus:** Auto-hide toggle.
+
+---
+
+## 📜 License
+
+MIT License. Free for personal and commercial use.

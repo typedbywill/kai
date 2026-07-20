@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KAI Overlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app-container" class="app-shell">
+    
+    <!-- Top Header Drag Bar -->
+    <header class="drag-bar" data-tauri-drag-region>
+      <div class="brand" data-tauri-drag-region>
+        <div class="brand-badge">KAI</div>
+        <span class="brand-title" data-tauri-drag-region>Desktop AI Helper</span>
+        <span id="model-indicator" class="model-badge">Ollama / llama3.2</span>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-clear" class="icon-btn" title="Clear Chat (Ctrl+L)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+        <button id="btn-settings" class="icon-btn" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button id="btn-close" class="icon-btn close-btn" title="Hide (Esc)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Messages Stream Area -->
+    <main id="chat-messages" class="chat-area">
+      <div class="welcome-card" id="welcome-card">
+        <div class="welcome-icon">⚡</div>
+        <h2>Hello, I'm KAI</h2>
+        <p>Your instant AI assistant overlay. Ask anything or paste code.</p>
+        <div class="shortcut-hints">
+          <span class="chip"><kbd>Meta</kbd> + <kbd>X</kbd> Toggle Overlay</span>
+          <span class="chip"><kbd>Esc</kbd> Hide Window</span>
+          <span class="chip"><kbd>Enter</kbd> Send</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Floating Prompt Input Container -->
+    <footer class="input-container">
+      <div class="input-wrapper">
+        <textarea id="prompt-input" placeholder="Ask KAI anything... (Shift+Enter for newline)" rows="1"></textarea>
+        <button id="btn-send" class="send-btn" title="Send (Enter)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </footer>
+
+    <!-- Slide-Over Settings Drawer -->
+    <aside id="settings-drawer" class="settings-drawer hidden">
+      <div class="drawer-header">
+        <h3>Settings</h3>
+        <button id="btn-close-settings" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="drawer-body">
+        <div class="form-group">
+          <label for="cfg-base-url">API Base URL</label>
+          <input type="text" id="cfg-base-url" placeholder="http://localhost:11434/v1" />
+          <span class="help-text">Ollama: <code>http://localhost:11434/v1</code> | OpenAI: <code>https://api.openai.com/v1</code></span>
+        </div>
+
+        <div class="form-group">
+          <label for="cfg-api-key">API Key</label>
+          <input type="password" id="cfg-api-key" placeholder="ollama (or OpenAI key)" />
+        </div>
+
+        <div class="form-group">
+          <label for="cfg-model">Model Name</label>
+          <input type="text" id="cfg-model" placeholder="llama3.2" />
+        </div>
+
+        <div class="form-group">
+          <label for="cfg-system">System Prompt</label>
+          <textarea id="cfg-system" rows="3" placeholder="You are KAI, a helpful desktop AI assistant..."></textarea>
+        </div>
+
+        <div class="form-group row-group">
+          <label for="cfg-auto-hide">Hide on loss of focus</label>
+          <input type="checkbox" id="cfg-auto-hide" checked />
+        </div>
+
+        <div class="drawer-footer">
+          <button id="btn-save-settings" class="primary-btn">Save Settings</button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
