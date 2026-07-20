@@ -5,6 +5,11 @@ echo "==============================================="
 echo "     KAI (Desktop AI Helper) Tauri Installer"
 echo "==============================================="
 
+# Kill running kai processes
+echo "[INFO] Stopping any running KAI instances..."
+pkill -9 -f kai 2>/dev/null || true
+pkill -9 -f kai-overlay 2>/dev/null || true
+
 # Detect distro
 if [ -f /etc/fedora-release ]; then
   DISTRO="fedora"
@@ -26,18 +31,30 @@ npm install
 echo "[INFO] Building KAI Tauri v2 binary..."
 npx tauri build
 
-# Install binary to user local bin (~/.local/bin) or system (/usr/local/bin)
+# Install binary to user local bin (~/.local/bin) and /usr/local/bin
 BINARY_SRC="src-tauri/target/release/kai-overlay"
 if [ ! -f "$BINARY_SRC" ]; then
   BINARY_SRC="src-tauri/target/release/kai"
 fi
 
 if [ -f "$BINARY_SRC" ]; then
+  # Install to user local bin
   TARGET_DIR="$HOME/.local/bin"
   mkdir -p "$TARGET_DIR"
   cp "$BINARY_SRC" "$TARGET_DIR/kai"
   chmod +x "$TARGET_DIR/kai"
   echo "[SUCCESS] KAI binary installed at $TARGET_DIR/kai"
+
+  # Install to /usr/local/bin if possible
+  if [ -w "/usr/local/bin" ]; then
+    cp "$BINARY_SRC" "/usr/local/bin/kai"
+    chmod +x "/usr/local/bin/kai"
+    echo "[SUCCESS] KAI binary updated at /usr/local/bin/kai"
+  elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+    sudo cp "$BINARY_SRC" "/usr/local/bin/kai"
+    sudo chmod +x "/usr/local/bin/kai"
+    echo "[SUCCESS] KAI binary updated at /usr/local/bin/kai (via sudo)"
+  fi
 else
   echo "[ERROR] Binary build artifact not found at $BINARY_SRC"
   exit 1
