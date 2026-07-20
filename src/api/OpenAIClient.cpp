@@ -8,6 +8,8 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
+#include <QDateTime>
+#include <algorithm>
 #include <QDebug>
 
 OpenAIClient::OpenAIClient(Settings *settings, QObject *parent)
@@ -16,8 +18,22 @@ OpenAIClient::OpenAIClient(Settings *settings, QObject *parent)
     , m_reply(nullptr)
     , m_isResponding(false)
 {
-    if (m_settings->restoreSession()) {
-        loadHistory();
+    loadHistory(); // Always load the history database on startup
+    
+    if (m_settings->restoreSession() && !m_conversations.isEmpty()) {
+        QString latestId;
+        qint64 latestTime = -1;
+        for (const QVariant &convVar : m_conversations) {
+            QVariantMap convMap = convVar.toMap();
+            qint64 time = convMap["timestamp"].toLongLong();
+            if (time > latestTime) {
+                latestTime = time;
+                latestId = convMap["id"].toString();
+            }
+        }
+        if (!latestId.isEmpty()) {
+            loadConversation(latestId);
+        }
     }
 }
 
@@ -29,6 +45,11 @@ QVariantList OpenAIClient::chatHistory() const
 bool OpenAIClient::isResponding() const
 {
     return m_isResponding;
+}
+
+QVariantList OpenAIClient::conversationsList() const
+{
+    return m_conversations;
 }
 
 QString OpenAIClient::currentResponse() const
@@ -67,6 +88,24 @@ void OpenAIClient::updateLastMessage(const QString &content, bool isError)
 void OpenAIClient::sendMessage(const QString &message)
 {
     if (m_isResponding) return;
+
+    // Generate new conversation ID and title if we are starting a fresh chat
+    if (m_currentConversationId.isEmpty()) {
+        m_currentConversationId = QString::number(QDateTime::currentMSecsSinceEpoch());
+        QString title = message.trimmed();
+        if (title.length() > 40) {
+            title = title.left(37) + "...";
+        }
+        
+        QVariantMap newConv;
+        newConv["id"] = m_currentConversationId;
+        newConv["title"] = title;
+        newConv["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+        newConv["messages"] = QVariantList();
+        
+        m_conversations.prepend(newConv);
+        emit conversationsListChanged();
+    }
 
     // Append user message
     appendMessage("user", message);
@@ -154,7 +193,7 @@ void OpenAIClient::clearConversation()
     cancelRequest();
     m_chatHistory.clear();
     m_currentResponse = "";
-    saveHistory();
+    m_currentConversationId = "";
     emit chatHistoryChanged();
     emit currentResponseChanged();
 }
@@ -254,23 +293,48 @@ QString OpenAIClient::historyFilePath() const
 
 void OpenAIClient::saveHistory()
 {
+    if (!m_currentConversationId.isEmpty()) {
+        for (int i = 0; i < m_conversations.size(); ++i) {
+            QVariantMap convMap = m_conversations[i].toMap();
+            if (convMap["id"].toString() == m_currentConversationId) {
+                convMap["messages"] = m_chatHistory;
+                convMap["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+                m_conversations[i] = convMap;
+                emit conversationsListChanged();
+                break;
+            }
+        }
+    }
+
     QFile file(historyFilePath());
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "Could not open history file for writing:" << historyFilePath();
         return;
     }
 
-    QJsonArray array;
-    for (const QVariant &msgVar : m_chatHistory) {
-        QVariantMap msgMap = msgVar.toMap();
-        QJsonObject obj;
-        obj["role"] = msgMap["role"].toString();
-        obj["content"] = msgMap["content"].toString();
-        obj["isError"] = msgMap["isError"].toBool();
-        array.append(obj);
+    QJsonArray rootArray;
+    for (const QVariant &convVar : m_conversations) {
+        QVariantMap convMap = convVar.toMap();
+        QJsonObject convObj;
+        convObj["id"] = convMap["id"].toString();
+        convObj["title"] = convMap["title"].toString();
+        convObj["timestamp"] = convMap["timestamp"].toLongLong();
+
+        QJsonArray msgArray;
+        QVariantList msgs = convMap["messages"].toList();
+        for (const QVariant &msgVar : msgs) {
+            QVariantMap msgMap = msgVar.toMap();
+            QJsonObject msgObj;
+            msgObj["role"] = msgMap["role"].toString();
+            msgObj["content"] = msgMap["content"].toString();
+            msgObj["isError"] = msgMap["isError"].toBool();
+            msgArray.append(msgObj);
+        }
+        convObj["messages"] = msgArray;
+        rootArray.append(convObj);
     }
 
-    QJsonDocument doc(array);
+    QJsonDocument doc(rootArray);
     file.write(doc.toJson());
     file.close();
 }
@@ -289,17 +353,86 @@ void OpenAIClient::loadHistory()
         return;
     }
 
-    m_chatHistory.clear();
-    QJsonArray array = doc.array();
-    for (const QJsonValue &value : array) {
-        if (value.isObject()) {
-            QJsonObject obj = value.toObject();
-            QVariantMap msg;
-            msg["role"] = obj["role"].toString();
-            msg["content"] = obj["content"].toString();
-            msg["isError"] = obj["isError"].toBool();
-            m_chatHistory.append(msg);
+    m_conversations.clear();
+    QJsonArray rootArray = doc.array();
+    for (const QJsonValue &convVal : rootArray) {
+        if (convVal.isObject()) {
+            QJsonObject convObj = convVal.toObject();
+            QVariantMap convMap;
+            convMap["id"] = convObj["id"].toString();
+            convMap["title"] = convObj["title"].toString();
+            convMap["timestamp"] = convObj["timestamp"].toVariant().toLongLong();
+
+            QVariantList msgs;
+            QJsonArray msgArray = convObj["messages"].toArray();
+            for (const QJsonValue &msgVal : msgArray) {
+                if (msgVal.isObject()) {
+                    QJsonObject msgObj = msgVal.toObject();
+                    QVariantMap msgMap;
+                    msgMap["role"] = msgObj["role"].toString();
+                    msgMap["content"] = msgObj["content"].toString();
+                    msgMap["isError"] = msgObj["isError"].toBool();
+                    msgs.append(msgMap);
+                }
+            }
+            convMap["messages"] = msgs;
+            m_conversations.append(convMap);
         }
     }
+
+    std::sort(m_conversations.begin(), m_conversations.end(), [](const QVariant &a, const QVariant &b) {
+        return a.toMap()["timestamp"].toLongLong() > b.toMap()["timestamp"].toLongLong();
+    });
+
+    emit conversationsListChanged();
+}
+
+void OpenAIClient::loadConversation(const QString &id)
+{
+    cancelRequest();
+    m_currentConversationId = id;
+    
+    for (const QVariant &convVar : m_conversations) {
+        QVariantMap convMap = convVar.toMap();
+        if (convMap["id"].toString() == id) {
+            m_chatHistory = convMap["messages"].toList();
+            m_currentResponse = "";
+            emit chatHistoryChanged();
+            emit currentResponseChanged();
+            break;
+        }
+    }
+}
+
+void OpenAIClient::deleteConversation(const QString &id)
+{
+    for (int i = 0; i < m_conversations.size(); ++i) {
+        if (m_conversations[i].toMap()["id"].toString() == id) {
+            m_conversations.removeAt(i);
+            break;
+        }
+    }
+    
+    if (m_currentConversationId == id) {
+        clearConversation();
+    }
+    
+    saveHistory();
+    emit conversationsListChanged();
+}
+
+void OpenAIClient::clearAllHistory()
+{
+    cancelRequest();
+    m_chatHistory.clear();
+    m_conversations.clear();
+    m_currentConversationId = "";
+    m_currentResponse = "";
+    
+    QFile file(historyFilePath());
+    file.remove();
+    
     emit chatHistoryChanged();
+    emit currentResponseChanged();
+    emit conversationsListChanged();
 }

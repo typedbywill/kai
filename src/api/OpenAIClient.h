@@ -13,6 +13,7 @@ class OpenAIClient : public QObject
     Q_PROPERTY(QVariantList chatHistory READ chatHistory NOTIFY chatHistoryChanged)
     Q_PROPERTY(bool isResponding READ isResponding NOTIFY isRespondingChanged)
     Q_PROPERTY(QString currentResponse READ currentResponse NOTIFY currentResponseChanged)
+    Q_PROPERTY(QVariantList conversationsList READ conversationsList NOTIFY conversationsListChanged)
 
 public:
     explicit OpenAIClient(Settings *settings, QObject *parent = nullptr);
@@ -20,10 +21,14 @@ public:
     QVariantList chatHistory() const;
     bool isResponding() const;
     QString currentResponse() const;
+    QVariantList conversationsList() const;
 
     Q_INVOKABLE void sendMessage(const QString &message);
     Q_INVOKABLE void clearConversation();
     Q_INVOKABLE void cancelRequest();
+    Q_INVOKABLE void loadConversation(const QString &id);
+    Q_INVOKABLE void deleteConversation(const QString &id);
+    Q_INVOKABLE void clearAllHistory();
 
 signals:
     void chatHistoryChanged();
@@ -31,6 +36,7 @@ signals:
     void currentResponseChanged();
     void errorOccurred(const QString &errorMsg);
     void finished();
+    void conversationsListChanged();
 
 private slots:
     void onReadyRead();
@@ -45,6 +51,8 @@ private:
     bool m_isResponding;
     QString m_currentResponse;
     QByteArray m_buffer;
+    QVariantList m_conversations;
+    QString m_currentConversationId;
 
     void setResponding(bool responding);
     void appendMessage(const QString &role, const QString &content, bool isError = false);

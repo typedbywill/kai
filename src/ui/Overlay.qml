@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import "markdown.js" as Markdown
 
 Kirigami.ApplicationWindow {
     id: root
-    width: 800
-    height: 500
+    width: 900
+    height: 600
     title: "KAI"
 
     // Center window on screen
@@ -210,11 +211,11 @@ Kirigami.ApplicationWindow {
                                     id: msgText
                                     anchors.fill: parent
                                     anchors.margins: modelData.role === "user" ? 8 : 0
-                                    text: modelData.content
+                                    text: modelData.role === "user" ? modelData.content : Markdown.parseMarkdown(modelData.content, isDarkTheme, activeTextColor, activeAltBgColor, activeHighlightColor)
                                     readOnly: true
                                     selectByMouse: true
                                     wrapMode: TextEdit.Wrap
-                                    textFormat: modelData.role === "user" ? Text.PlainText : Text.MarkdownText
+                                    textFormat: modelData.role === "user" ? Text.PlainText : Text.RichText
                                     color: modelData.isError ? activeNegativeTextColor : activeTextColor
                                     background: null
                                     cursorVisible: false
@@ -282,6 +283,13 @@ Kirigami.ApplicationWindow {
                         onClicked: mainLayout.currentIndex = 1
                     }
 
+                    Button {
+                        icon.name: "view-history"
+                        text: "Histórico"
+                        flat: true
+                        onClicked: mainLayout.currentIndex = 2
+                    }
+
                     Item { Layout.fillWidth: true }
 
                     Button {
@@ -320,6 +328,128 @@ Kirigami.ApplicationWindow {
             // Settings View Page
             SettingsView {
                 id: settingsView
+            }
+
+            // History View Page
+            ColumnLayout {
+                id: historyView
+                spacing: 16
+
+                Label {
+                    text: "Histórico de Conversas"
+                    font.pointSize: 14
+                    font.bold: true
+                    color: activeTextColor
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                Label {
+                    text: "Nenhum histórico de conversa encontrado."
+                    font.italic: true
+                    color: activeDisabledTextColor
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    visible: openAIClient.conversationsList.length === 0
+                }
+
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    visible: openAIClient.conversationsList.length > 0
+
+                    ListView {
+                        id: historyListView
+                        width: parent.width
+                        model: openAIClient.conversationsList
+                        spacing: 8
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        delegate: Rectangle {
+                            width: historyListView.width - 16
+                            x: 8
+                            height: 50
+                            color: activeAltBgColor
+                            radius: 6
+                            border.width: 1
+                            border.color: separatorColor
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    openAIClient.loadConversation(modelData.id);
+                                    mainLayout.currentIndex = 0;
+                                }
+                            }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                spacing: 12
+
+                                Kirigami.Icon {
+                                    source: "chat"
+                                    implicitWidth: 16
+                                    implicitHeight: 16
+                                    color: activeTextColor
+                                }
+
+                                Label {
+                                    text: modelData.title
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                    color: activeTextColor
+                                    font.bold: true
+                                }
+
+                                Label {
+                                    text: {
+                                        var date = new Date(modelData.timestamp);
+                                        return date.toLocaleDateString(Qt.locale(), "dd/MM/yyyy") + " " + date.toLocaleTimeString(Qt.locale(), "hh:mm");
+                                    }
+                                    color: activeDisabledTextColor
+                                    font.pointSize: 9
+                                }
+
+                                Button {
+                                    icon.name: "edit-delete"
+                                    flat: true
+                                    onClicked: openAIClient.deleteConversation(modelData.id)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: separatorColor
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Button {
+                        text: "Limpar Todo o Histórico"
+                        icon.name: "edit-clear-all"
+                        onClicked: openAIClient.clearAllHistory()
+                        visible: openAIClient.conversationsList.length > 0
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Button {
+                        text: "Voltar"
+                        icon.name: "go-previous"
+                        onClicked: mainLayout.currentIndex = 0
+                    }
+                }
             }
         }
     }

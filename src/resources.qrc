@@ -2,5 +2,6 @@
     <qresource prefix="/">
         <file>ui/Overlay.qml</file>
         <file>ui/SettingsView.qml</file>
+        <file>ui/markdown.js</file>
     </qresource>
 </RCC>
