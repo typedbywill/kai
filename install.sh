@@ -5,10 +5,11 @@ echo "==============================================="
 echo "     KAI (Desktop AI Helper) Tauri Installer"
 echo "==============================================="
 
-# Kill running kai processes
+# Kill running kai processes (exact match to avoid killing rustc)
 echo "[INFO] Stopping any running KAI instances..."
-pkill -9 -f kai 2>/dev/null || true
-pkill -9 -f kai-overlay 2>/dev/null || true
+pkill -x kai 2>/dev/null || true
+pkill -f "target/release/kai-overlay" 2>/dev/null || true
+pkill -f "target/debug/kai-overlay" 2>/dev/null || true
 
 # Detect distro
 if [ -f /etc/fedora-release ]; then
