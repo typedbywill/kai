@@ -1,6 +1,6 @@
 [package]
 name = "kai-overlay"
-version = "1.0.0"
+version = "2.0.0"
 description = "KAI - Fast Desktop AI Helper Overlay"
 authors = ["William"]
 edition = "2021"
@@ -21,7 +21,9 @@ reqwest = { version = "0.12", features = ["json", "stream"] }
 futures-util = "0.3"
 tokio = { version = "1.0", features = ["full"] }
 dirs = "5.0"
-libc = "0.2"
+arboard = "3.4"
+keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
+uuid = { version = "1", features = ["v4"] }
 
 [features]
 default = ["custom-protocol"]

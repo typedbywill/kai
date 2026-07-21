@@ -1,10 +1,16 @@
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
+import { resolve } from "path";
 
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
   plugins: [tailwindcss()],
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "./src"),
+    },
+  },
   clearScreen: false,
   server: {
     port: 1420,

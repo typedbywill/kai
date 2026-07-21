@@ -1,0 +1,15 @@
+[Unit]
+Description=KAI Desktop AI Helper Overlay
+Documentation=https://github.com/typedbywill/kai
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/kai --foreground
+Restart=on-failure
+RestartSec=3
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=default.target

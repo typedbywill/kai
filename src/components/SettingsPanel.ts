@@ -1,11 +1,19 @@
-import { loadSettings, saveSettings } from "../services/settings.js";
+import { loadSettings, saveSettings } from "../ipc/settings";
+import { createModelSelector } from "./ModelSelector";
+import { qs } from "../utils/dom";
+import type { AppConfig } from "../types/settings";
 
-export function createSettingsPanel(onClose) {
+export function createSettingsPanel(
+  onClose?: (config?: AppConfig) => void,
+): HTMLElement {
   const container = document.createElement("div");
-  container.className = "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-pop-in select-none";
+  container.className =
+    "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-pop-in select-none";
+  container.id = "settings-panel";
 
   const panel = document.createElement("div");
-  panel.className = "w-full max-w-2xl h-[390px] bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden";
+  panel.className =
+    "w-full max-w-2xl h-[420px] bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden";
 
   panel.innerHTML = `
     <!-- Header -->
@@ -29,12 +37,10 @@ export function createSettingsPanel(onClose) {
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
           <span>API & Model</span>
         </button>
-
         <button data-tab="persona" class="tab-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium text-left flex items-center gap-2.5 transition-all text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/60">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
           <span>System Persona</span>
         </button>
-
         <button data-tab="shortcuts" class="tab-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium text-left flex items-center gap-2.5 transition-all text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/60">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
           <span>Shortcuts & Overlay</span>
@@ -54,19 +60,10 @@ export function createSettingsPanel(onClose) {
           <div>
             <label class="block text-xs text-neutral-500 dark:text-neutral-400 font-semibold mb-1">API Key</label>
             <input type="password" id="setting-api-key" class="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3.5 py-2 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-colors font-mono" placeholder="sk-...">
+            <p class="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">Stored securely in your system's keyring.</p>
           </div>
 
-          <div>
-            <label class="block text-xs text-neutral-500 dark:text-neutral-400 font-semibold mb-1">Model Name</label>
-            <input type="text" id="setting-model" class="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3.5 py-2 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-colors font-mono" placeholder="gpt-4o-mini">
-            <div class="flex items-center gap-1.5 mt-2 flex-wrap text-[10px]">
-              <span class="text-neutral-400 font-medium">Presets:</span>
-              <button type="button" class="preset-btn px-2 py-0.5 rounded-md bg-neutral-200/60 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors">gpt-4o-mini</button>
-              <button type="button" class="preset-btn px-2 py-0.5 rounded-md bg-neutral-200/60 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors">claude-3-5-sonnet</button>
-              <button type="button" class="preset-btn px-2 py-0.5 rounded-md bg-neutral-200/60 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors">deepseek-chat</button>
-              <button type="button" class="preset-btn px-2 py-0.5 rounded-md bg-neutral-200/60 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors">llama3</button>
-            </div>
-          </div>
+          <div id="model-selector-mount"></div>
         </div>
 
         <!-- Tab 2: Persona -->
@@ -85,17 +82,22 @@ export function createSettingsPanel(onClose) {
               <p class="font-medium text-neutral-800 dark:text-neutral-200">Global Overlay Shortcut</p>
               <p class="text-[10px] text-neutral-400 mt-0.5">Press anytime from any app to toggle KAI</p>
             </div>
-            <kbd class="px-2.5 py-1 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-lg font-mono font-bold shadow-sm border border-neutral-200 dark:border-neutral-700">Meta + X</kbd>
+            <input type="text" id="setting-shortcut" class="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-lg font-mono font-bold shadow-sm border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs text-center w-28 focus:outline-none focus:border-black dark:focus:border-white" placeholder="Super+X">
           </div>
-
           <div class="p-3 bg-neutral-100 dark:bg-neutral-900/80 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
             <div>
-              <p class="font-medium text-neutral-800 dark:text-neutral-200">CLI Toggle Command</p>
-              <p class="text-[10px] text-neutral-400 mt-0.5">Toggle overlay window programmatically</p>
+              <p class="font-medium text-neutral-800 dark:text-neutral-200">Capture Selected Text</p>
+              <p class="text-[10px] text-neutral-400 mt-0.5">Grab selected text and open KAI with it</p>
             </div>
-            <code class="px-2.5 py-1 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-lg font-mono font-bold shadow-sm border border-neutral-200 dark:border-neutral-700 text-[11px]">kai --toggle</code>
+            <kbd class="px-2.5 py-1 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-lg font-mono font-bold shadow-sm border border-neutral-200 dark:border-neutral-700">Meta + Shift + X</kbd>
           </div>
-
+          <div class="p-3 bg-neutral-100 dark:bg-neutral-900/80 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+            <div>
+              <p class="font-medium text-neutral-800 dark:text-neutral-200">Screen Region Capture</p>
+              <p class="text-[10px] text-neutral-400 mt-0.5">Capture a screen region as image attachment</p>
+            </div>
+            <kbd class="px-2.5 py-1 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-lg font-mono font-bold shadow-sm border border-neutral-200 dark:border-neutral-700">Meta + Shift + S</kbd>
+          </div>
           <div class="p-3 bg-neutral-100 dark:bg-neutral-900/80 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
             <div>
               <p class="font-medium text-neutral-800 dark:text-neutral-200">Auto-Hide on Focus Loss</p>
@@ -120,75 +122,81 @@ export function createSettingsPanel(onClose) {
 
   container.appendChild(panel);
 
-  const baseUrlInput = panel.querySelector("#setting-base-url");
-  const apiKeyInput = panel.querySelector("#setting-api-key");
-  const modelInput = panel.querySelector("#setting-model");
-  const systemPromptInput = panel.querySelector("#setting-system-prompt");
+  const baseUrlInput = qs<HTMLInputElement>(panel, "#setting-base-url");
+  const apiKeyInput = qs<HTMLInputElement>(panel, "#setting-api-key");
+  const shortcutInput = qs<HTMLInputElement>(panel, "#setting-shortcut");
+  const systemPromptInput = qs<HTMLTextAreaElement>(panel, "#setting-system-prompt");
+  const modelSelectorMount = qs<HTMLElement>(panel, "#model-selector-mount");
+
+  let selectedModel = "";
 
   // Load active settings
-  loadSettings().then((cfg) => {
+  void loadSettings().then((cfg) => {
     baseUrlInput.value = cfg.base_url || "";
     apiKeyInput.value = cfg.api_key || "";
-    modelInput.value = cfg.model || "";
+    shortcutInput.value = cfg.shortcut || "Super+X";
     systemPromptInput.value = cfg.system_prompt || "";
+    selectedModel = cfg.model || "gpt-4o-mini";
+
+    // Mount model selector after settings loaded
+    const modelSelector = createModelSelector(selectedModel, (model) => {
+      selectedModel = model;
+    });
+    modelSelectorMount.appendChild(modelSelector.element);
   });
 
   // Tab Switching Logic
-  const tabButtons = panel.querySelectorAll(".tab-btn");
-  const tabContents = panel.querySelectorAll(".tab-content");
+  const tabButtons = panel.querySelectorAll<HTMLButtonElement>(".tab-btn");
+  const tabContents = panel.querySelectorAll<HTMLElement>(".tab-content");
 
-  tabButtons.forEach((btn) => {
+  for (const btn of tabButtons) {
     btn.addEventListener("click", () => {
       const targetTab = btn.getAttribute("data-tab");
 
-      tabButtons.forEach((b) => {
-        b.className = "tab-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium text-left flex items-center gap-2.5 transition-all text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/60";
-      });
-      btn.className = "tab-btn active w-full px-3 py-2.5 rounded-xl text-xs font-medium text-left flex items-center gap-2.5 transition-all bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-sm";
+      for (const b of tabButtons) {
+        b.className =
+          "tab-btn w-full px-3 py-2.5 rounded-xl text-xs font-medium text-left flex items-center gap-2.5 transition-all text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/60";
+      }
+      btn.className =
+        "tab-btn active w-full px-3 py-2.5 rounded-xl text-xs font-medium text-left flex items-center gap-2.5 transition-all bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-sm";
 
-      tabContents.forEach((content) => {
+      for (const content of tabContents) {
         if (content.id === `tab-content-${targetTab}`) {
           content.classList.remove("hidden");
         } else {
           content.classList.add("hidden");
         }
-      });
+      }
     });
-  });
+  }
 
-  // Preset Buttons Logic
-  const presetButtons = panel.querySelectorAll(".preset-btn");
-  presetButtons.forEach((pBtn) => {
-    pBtn.addEventListener("click", () => {
-      modelInput.value = pBtn.textContent.trim();
-    });
-  });
-
-  // Close / Cancel Action
-  const closePanel = () => {
+  // Close / Cancel
+  const closePanel = (): void => {
     container.remove();
-    if (onClose) onClose();
+    onClose?.();
   };
 
-  panel.querySelector("#close-settings").addEventListener("click", closePanel);
-  panel.querySelector("#cancel-settings").addEventListener("click", closePanel);
+  qs(panel, "#close-settings").addEventListener("click", closePanel);
+  qs(panel, "#cancel-settings").addEventListener("click", closePanel);
 
-  // Save Settings Action
-  panel.querySelector("#save-settings").addEventListener("click", async () => {
-    const config = {
+  // Save
+  qs(panel, "#save-settings").addEventListener("click", () => {
+    const config: AppConfig = {
       base_url: baseUrlInput.value.trim() || "https://api.openai.com/v1",
       api_key: apiKeyInput.value.trim(),
-      model: modelInput.value.trim() || "gpt-4o-mini",
+      model: selectedModel || "gpt-4o-mini",
       system_prompt: systemPromptInput.value.trim(),
+      shortcut: shortcutInput.value.trim() || "Super+X",
     };
 
-    try {
-      await saveSettings(config);
-      container.remove();
-      if (onClose) onClose(config);
-    } catch (e) {
-      alert("Failed to save settings: " + e);
-    }
+    void saveSettings(config)
+      .then(() => {
+        container.remove();
+        onClose?.(config);
+      })
+      .catch((e: unknown) => {
+        alert("Failed to save settings: " + String(e));
+      });
   });
 
   return container;

@@ -1,10 +1,18 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
-import { isTauriEnv, loadSettings } from "./settings.js";
+import type { ChatMessage } from "../types/chat";
+import type { AppConfig } from "../types/settings";
+import { DEFAULT_CONFIG } from "../types/settings";
+import { isTauriEnv } from "../utils/env";
 
-export async function streamChat(prompt, history, onChunk, onError) {
+export async function streamChat(
+  prompt: string,
+  history: ChatMessage[],
+  onChunk: (chunk: string) => void,
+  onError: (error: string) => void,
+): Promise<void> {
   if (isTauriEnv()) {
     try {
-      const channel = new Channel();
+      const channel = new Channel<string>();
       channel.onmessage = (message) => {
         onChunk(message);
       };
@@ -16,16 +24,23 @@ export async function streamChat(prompt, history, onChunk, onError) {
       });
       return;
     } catch (err) {
-      console.warn("Tauri stream_chat failed, trying web fallback:", err);
+      const message =
+        err instanceof Error ? err.message : String(err);
+      onError(message);
+      return;
     }
   }
 
-  // Web Browser / Fallback Direct Stream (using fetch)
+  // Web browser fallback (direct fetch streaming)
   try {
-    const config = await loadSettings();
-    const messages = [];
+    const configRaw = localStorage.getItem("kai_config");
+    const config: AppConfig = configRaw
+      ? { ...DEFAULT_CONFIG, ...JSON.parse(configRaw) }
+      : DEFAULT_CONFIG;
 
-    if (config.system_prompt && config.system_prompt.trim()) {
+    const messages: Array<{ role: string; content: string }> = [];
+
+    if (config.system_prompt?.trim()) {
       messages.push({ role: "system", content: config.system_prompt });
     }
 
@@ -34,14 +49,14 @@ export async function streamChat(prompt, history, onChunk, onError) {
     }
     messages.push({ role: "user", content: prompt });
 
-    const url = config.base_url.endsWith('/')
+    const url = config.base_url.endsWith("/")
       ? `${config.base_url}chat/completions`
       : `${config.base_url}/chat/completions`;
 
-    const headers = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (config.api_key && config.api_key.trim()) {
+    if (config.api_key?.trim()) {
       headers["Authorization"] = `Bearer ${config.api_key.trim()}`;
     }
 
@@ -60,7 +75,9 @@ export async function streamChat(prompt, history, onChunk, onError) {
       throw new Error(`API Error (${response.status}): ${errText}`);
     }
 
-    const reader = response.body.getReader();
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("No response body stream available");
+
     const decoder = new TextDecoder("utf-8");
     let buffer = "";
 
@@ -70,7 +87,7 @@ export async function streamChat(prompt, history, onChunk, onError) {
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+      buffer = lines.pop() ?? "";
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -78,12 +95,14 @@ export async function streamChat(prompt, history, onChunk, onError) {
           const data = trimmed.replace(/^data:\s*/, "");
           if (data === "[DONE]") break;
           try {
-            const parsed = JSON.parse(data);
+            const parsed = JSON.parse(data) as {
+              choices?: Array<{ delta?: { content?: string } }>;
+            };
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
               onChunk(content);
             }
-          } catch (e) {
+          } catch {
             // Ignore parse errors for partial chunks
           }
         }
@@ -92,8 +111,8 @@ export async function streamChat(prompt, history, onChunk, onError) {
 
     onChunk("[DONE]");
   } catch (err) {
-    if (onError) {
-      onError(err.message || "Unknown streaming error occurred");
-    }
+    const message =
+      err instanceof Error ? err.message : "Unknown streaming error occurred";
+    onError(message);
   }
 }

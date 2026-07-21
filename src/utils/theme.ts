@@ -1,4 +1,4 @@
-export function initTheme() {
+export function initTheme(): void {
   const saved = localStorage.getItem("kai_theme");
   if (saved === "light") {
     document.documentElement.classList.remove("dark");
@@ -7,7 +7,7 @@ export function initTheme() {
   }
 }
 
-export function toggleTheme() {
+export function toggleTheme(): boolean {
   const isDark = document.documentElement.classList.contains("dark");
   if (isDark) {
     document.documentElement.classList.remove("dark");
@@ -19,6 +19,6 @@ export function toggleTheme() {
   return !isDark;
 }
 
-export function isDarkMode() {
+export function isDarkMode(): boolean {
   return document.documentElement.classList.contains("dark");
 }

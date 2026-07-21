@@ -2,16 +2,18 @@
 set -e
 
 echo "==============================================="
-echo "     KAI (Desktop AI Helper) Tauri Installer"
+echo "     KAI v2 (Desktop AI Helper) Installer"
 echo "==============================================="
 
-# Kill running kai processes (exact match to avoid killing rustc)
+# ── Stop existing KAI ──
 echo "[INFO] Stopping any running KAI instances..."
+systemctl --user stop kai.service 2>/dev/null || true
 pkill -x kai 2>/dev/null || true
 pkill -f "target/release/kai-overlay" 2>/dev/null || true
 pkill -f "target/debug/kai-overlay" 2>/dev/null || true
+sleep 1
 
-# Detect distro
+# ── Detect distro ──
 if [ -f /etc/fedora-release ]; then
   DISTRO="fedora"
 elif [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
@@ -21,18 +23,17 @@ elif [ -f /etc/arch-release ]; then
 else
   DISTRO="unknown"
 fi
-
 echo "[INFO] Detected distribution type: $DISTRO"
 
-# Install npm packages
+# ── Install npm packages ──
 echo "[INFO] Installing npm packages..."
 npm install
 
-# Build Tauri app
+# ── Build Tauri app ──
 echo "[INFO] Building KAI Tauri v2 binary..."
 npx tauri build
 
-# Install binary to user local bin (~/.local/bin) and /usr/local/bin
+# ── Install binary ──
 BINARY_SRC="src-tauri/target/release/kai-overlay"
 if [ ! -f "$BINARY_SRC" ]; then
   BINARY_SRC="src-tauri/target/release/kai"
@@ -42,7 +43,6 @@ if [ -f "$BINARY_SRC" ]; then
   # Install to user local bin
   TARGET_DIR="$HOME/.local/bin"
   mkdir -p "$TARGET_DIR"
-  pkill -9 -x kai 2>/dev/null || true
   rm -f "$TARGET_DIR/kai"
   cp "$BINARY_SRC" "$TARGET_DIR/kai"
   chmod +x "$TARGET_DIR/kai"
@@ -65,8 +65,17 @@ else
   exit 1
 fi
 
-# Install desktop entry and configure global shortcut (Super+X / Meta+X -> kai --toggle)
-echo "[INFO] Configuring desktop shortcut (Super+X / Meta+X -> kai --toggle)..."
+# ── Install systemd user service ──
+echo "[INFO] Installing systemd user service..."
+SYSTEMD_DIR="$HOME/.config/systemd/user"
+mkdir -p "$SYSTEMD_DIR"
+cp "resources/kai.service" "$SYSTEMD_DIR/kai.service"
+systemctl --user daemon-reload
+systemctl --user enable kai.service
+echo "[SUCCESS] Systemd user service installed and enabled"
+
+# ── Install desktop entry ──
+echo "[INFO] Configuring desktop shortcut (Super+X -> kai --toggle)..."
 DESKTOP_DIR="$HOME/.local/share/applications"
 mkdir -p "$DESKTOP_DIR"
 cat << 'EOF' > "$DESKTOP_DIR/kai-toggle.desktop"
@@ -80,7 +89,9 @@ Categories=Utility;
 X-KDE-GlobalAccel-Shortcut=Meta+X
 EOF
 
-# KDE Plasma Shortcut Configuration
+# ── Configure DE-specific shortcuts ──
+
+# KDE Plasma
 if command -v kwriteconfig6 >/dev/null 2>&1; then
   KCONFIG="kwriteconfig6"
 elif command -v kwriteconfig5 >/dev/null 2>&1; then
@@ -96,7 +107,7 @@ if [ -n "$KCONFIG" ]; then
   echo "[SUCCESS] KDE Global Shortcut configured: Meta+X -> kai --toggle"
 fi
 
-# GNOME Shortcut Configuration
+# GNOME
 if command -v gsettings >/dev/null 2>&1 && [ "$XDG_CURRENT_DESKTOP" = "GNOME" -o "$XDG_CURRENT_DESKTOP" = "Ubuntu" -o "$XDG_CURRENT_DESKTOP" = "Pop:GNOME" ]; then
   KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/kai-toggle/"
   gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['$KEY_PATH']" 2>/dev/null || true
@@ -105,14 +116,21 @@ if command -v gsettings >/dev/null 2>&1 && [ "$XDG_CURRENT_DESKTOP" = "GNOME" -o
   gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding '<Super>x' 2>/dev/null || true
 fi
 
-# XFCE Shortcut Configuration
+# XFCE
 if command -v xfconf-query >/dev/null 2>&1; then
   xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Super>x" -n -t string -s "kai --toggle" 2>/dev/null || true
 fi
 
+# ── Start service ──
+echo "[INFO] Starting KAI service..."
+systemctl --user start kai.service
+echo "[SUCCESS] KAI service started"
+
 echo "==============================================="
-echo "  KAI Installation Completed Successfully! 🎉"
-echo "  Run 'kai' to launch the desktop overlay."
-echo "  Run 'kai --toggle' to toggle overlay visibility."
-echo "  Hotkey: Meta + X (or Super + X)"
+echo "  KAI v2 Installation Completed! 🎉"
+echo "  KAI is running as a background service."
+echo "  Hotkey: Meta + X (toggle overlay)"
+echo "  Hotkey: Meta + Shift + X (capture text)"
+echo "  Hotkey: Meta + Shift + S (capture screen)"
+echo "  Run 'systemctl --user status kai' to check status."
 echo "==============================================="

@@ -1,17 +1,25 @@
 {
   "name": "kai-overlay",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "type-check": "tsc --noEmit",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "bench": "bash benchmarks/startup.sh && bash benchmarks/memory.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-global-shortcut": "^2.2.0",
+    "@tauri-apps/plugin-updater": "^2.2.0",
+    "@tauri-apps/plugin-process": "^2.2.0",
     "highlight.js": "^11.11.1",
     "marked": "^15.0.6",
     "tailwindcss": "^4.0.0"
@@ -19,6 +27,11 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
     "@tauri-apps/cli": "^2.2.0",
-    "vite": "^6.2.0"
+    "@testing-library/dom": "^10.0.0",
+    "@playwright/test": "^1.48.0",
+    "jsdom": "^25.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.0"
   }
 }

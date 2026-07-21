@@ -55,14 +55,30 @@ pub async fn stream_chat(
         req_builder = req_builder.bearer_auth(config.api_key.trim());
     }
 
-    let response = req_builder
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to AI provider ({}): {}", url, e))?;
+    let response = req_builder.send().await.map_err(|e| {
+        format!(
+            "Failed to connect to AI provider.\n\nURL: {}\nError: {}\n\nPlease check:\n• Is the API URL correct?\n• Is the server running?\n• Is your network connection working?",
+            url, e
+        )
+    })?;
 
     if !response.status().is_success() {
+        let status = response.status();
         let err_text = response.text().await.unwrap_or_default();
-        return Err(format!("API Error: {}", err_text));
+
+        let hint = match status.as_u16() {
+            401 => "\n\nYour API key is invalid or missing. Check Settings → API & Model.",
+            403 => "\n\nAccess forbidden. Your API key may not have the required permissions.",
+            404 => "\n\nEndpoint not found. Check if the Base API URL is correct.",
+            429 => "\n\nRate limited. Wait a moment and try again, or check your API plan.",
+            500..=599 => "\n\nThe server returned an internal error. Try again later.",
+            _ => "",
+        };
+
+        return Err(format!(
+            "API Error (HTTP {}): {}{}",
+            status, err_text, hint
+        ));
     }
 
     let mut stream = response.bytes_stream();

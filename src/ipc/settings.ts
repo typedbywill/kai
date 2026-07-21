@@ -1,30 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { AppConfig } from "../types/settings";
+import { DEFAULT_CONFIG } from "../types/settings";
+import { isTauriEnv } from "../utils/env";
 
-export function isTauriEnv() {
-  return typeof window !== "undefined" && (
-    window.__TAURI_INTERNALS__ !== undefined ||
-    window.__TAURI__ !== undefined ||
-    window.__TAURI_IPC__ !== undefined
-  );
-}
-
-const DEFAULT_CONFIG = {
-  base_url: "https://api.openai.com/v1",
-  api_key: "",
-  model: "gpt-4o-mini",
-  system_prompt: "You are KAI, a helpful, ultra-fast AI assistant desktop overlay.",
-};
-
-export async function loadSettings() {
+export async function loadSettings(): Promise<AppConfig> {
   if (isTauriEnv()) {
     try {
-      return await invoke("load_settings");
+      return await invoke<AppConfig>("load_settings");
     } catch (err) {
       console.error("Failed to load settings via Tauri IPC:", err);
     }
   }
 
-  // Fallback to localStorage for browser dev environment
   try {
     const saved = localStorage.getItem("kai_config");
     if (saved) {
@@ -34,26 +21,23 @@ export async function loadSettings() {
     console.warn("Failed to read settings from localStorage:", e);
   }
 
-  return DEFAULT_CONFIG;
+  return { ...DEFAULT_CONFIG };
 }
 
-export async function saveSettings(config) {
+export async function saveSettings(config: AppConfig): Promise<void> {
   if (isTauriEnv()) {
     try {
       await invoke("save_settings", { config });
-      // Also sync to localStorage
       localStorage.setItem("kai_config", JSON.stringify(config));
-      return true;
+      return;
     } catch (err) {
       console.error("Failed to save settings via Tauri IPC:", err);
       throw err;
     }
   }
 
-  // Web Browser fallback
   try {
     localStorage.setItem("kai_config", JSON.stringify(config));
-    return true;
   } catch (err) {
     console.error("Failed to save settings to localStorage:", err);
     throw err;
