@@ -61,8 +61,54 @@ else
   exit 1
 fi
 
+# Install desktop entry and configure global shortcut (Super+X / Meta+X -> kai --toggle)
+echo "[INFO] Configuring desktop shortcut (Super+X / Meta+X -> kai --toggle)..."
+DESKTOP_DIR="$HOME/.local/share/applications"
+mkdir -p "$DESKTOP_DIR"
+cat << 'EOF' > "$DESKTOP_DIR/kai-toggle.desktop"
+[Desktop Entry]
+Name=KAI Toggle
+Comment=Toggle KAI Desktop AI Helper
+Exec=kai --toggle
+Terminal=false
+Type=Application
+Categories=Utility;
+X-KDE-GlobalAccel-Shortcut=Meta+X
+EOF
+
+# KDE Plasma Shortcut Configuration
+if command -v kwriteconfig6 >/dev/null 2>&1; then
+  KCONFIG="kwriteconfig6"
+elif command -v kwriteconfig5 >/dev/null 2>&1; then
+  KCONFIG="kwriteconfig5"
+else
+  KCONFIG=""
+fi
+
+if [ -n "$KCONFIG" ]; then
+  $KCONFIG --file "$HOME/.config/kglobalshortcutsrc" --group "kai-toggle.desktop" --key "_launch" "Meta+X,Meta+X,KAI Toggle"
+  $KCONFIG --file "$HOME/.config/kglobalshortcutsrc" --group "services" --key "kai-toggle.desktop" "Meta+X,Meta+X,KAI Toggle"
+  dbus-send --session --type=method_call --dest=org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reloadConfig 2>/dev/null || true
+  echo "[SUCCESS] KDE Global Shortcut configured: Meta+X -> kai --toggle"
+fi
+
+# GNOME Shortcut Configuration
+if command -v gsettings >/dev/null 2>&1 && [ "$XDG_CURRENT_DESKTOP" = "GNOME" -o "$XDG_CURRENT_DESKTOP" = "Ubuntu" -o "$XDG_CURRENT_DESKTOP" = "Pop:GNOME" ]; then
+  KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/kai-toggle/"
+  gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['$KEY_PATH']" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH name 'KAI Toggle' 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH command 'kai --toggle' 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding '<Super>x' 2>/dev/null || true
+fi
+
+# XFCE Shortcut Configuration
+if command -v xfconf-query >/dev/null 2>&1; then
+  xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Super>x" -n -t string -s "kai --toggle" 2>/dev/null || true
+fi
+
 echo "==============================================="
 echo "  KAI Installation Completed Successfully! 🎉"
 echo "  Run 'kai' to launch the desktop overlay."
+echo "  Run 'kai --toggle' to toggle overlay visibility."
 echo "  Hotkey: Meta + X (or Super + X)"
 echo "==============================================="

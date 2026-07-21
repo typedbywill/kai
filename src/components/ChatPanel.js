@@ -57,7 +57,7 @@ export function createChatPanel() {
           K
         </div>
         <h2 class="text-base font-semibold text-neutral-800 dark:text-neutral-200 mb-1">What can I help with?</h2>
-        <p class="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs leading-relaxed">
+        <p class="text-xs text-neutral-500 dark:text-neutral-400 max-w-md leading-relaxed">
           Press <kbd class="px-1.5 py-0.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded font-mono text-[10px]">Meta + X</kbd> anytime to toggle overlay.
         </p>
       </div>

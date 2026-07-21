@@ -21,6 +21,7 @@ reqwest = { version = "0.12", features = ["json", "stream"] }
 futures-util = "0.3"
 tokio = { version = "1.0", features = ["full"] }
 dirs = "5.0"
+libc = "0.2"
 
 [features]
 default = ["custom-protocol"]

@@ -14,8 +14,8 @@
       {
         "title": "KAI AI Helper",
         "label": "main",
-        "width": 440,
-        "height": 720,
+        "width": 800,
+        "height": 500,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
