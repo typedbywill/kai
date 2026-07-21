@@ -42,16 +42,20 @@ if [ -f "$BINARY_SRC" ]; then
   # Install to user local bin
   TARGET_DIR="$HOME/.local/bin"
   mkdir -p "$TARGET_DIR"
+  pkill -9 -x kai 2>/dev/null || true
+  rm -f "$TARGET_DIR/kai"
   cp "$BINARY_SRC" "$TARGET_DIR/kai"
   chmod +x "$TARGET_DIR/kai"
   echo "[SUCCESS] KAI binary installed at $TARGET_DIR/kai"
 
   # Install to /usr/local/bin if possible
   if [ -w "/usr/local/bin" ]; then
+    rm -f "/usr/local/bin/kai"
     cp "$BINARY_SRC" "/usr/local/bin/kai"
     chmod +x "/usr/local/bin/kai"
     echo "[SUCCESS] KAI binary updated at /usr/local/bin/kai"
   elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+    sudo rm -f "/usr/local/bin/kai"
     sudo cp "$BINARY_SRC" "/usr/local/bin/kai"
     sudo chmod +x "/usr/local/bin/kai"
     echo "[SUCCESS] KAI binary updated at /usr/local/bin/kai (via sudo)"
